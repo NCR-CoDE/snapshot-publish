@@ -84,8 +84,9 @@ module.exports = function (opts) {
       const exec = childProcess.exec(cmd, {cwd: opts.cwd, maxBuffer: opts.maxBufferSize}, function (error, stdout, stderr) {
         if (error) {
           reject(stderr);
+        } else {
+          resolve(stdout);
         }
-        resolve(stdout);
       });
 
       if (opts.redirectOutput) {
