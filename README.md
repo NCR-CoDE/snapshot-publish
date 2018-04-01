@@ -10,8 +10,8 @@ Note that unpublishing does not work on the main NPM registry, however this modu
 
 ## Install
 
-```
-$ npm install snapshot-publish
+```sh
+ $ npm install snapshot-publish
 ```
 
 ## Usage
@@ -19,23 +19,39 @@ $ npm install snapshot-publish
 ```js
 const publish = require('snapshot-publish');
 
-publish().then(function () {
-	console.log('A new version has been published!');
+publish().then(function (npmPublishOutput) {
+  console.log('A new version has been published!');
 });
 ```
 
 ## API
 
-### snapshotPublish([cwd])
+### snapshotPublish([opts])
 
 Returns a promise that is resolved when the package has been published.
 
+#### opts
+
 #### cwd
 
-Type: `string`  
+Type: `string`
 Default: `.`
 
 Directory to start looking for a package.json file.
+
+#### redirectOutput
+
+type: `bool`
+Default: `false`
+
+Redirect npm cmd output to stdout/err
+
+#### maxBufferSize
+
+type: `integer`
+Default: 2000 * 1024
+
+Maximum amount of output buffer from npm publish commands, up this if you have a lot of output from your npm scripts and this script throws
 
 ## Licence
 

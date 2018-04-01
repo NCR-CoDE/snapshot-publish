@@ -1,14 +1,19 @@
 'use strict';
 const readPkgUp = require('read-pkg-up');
-const pify = require('pify');
 const semver = require('semver');
-const childProcess = pify(require('child_process'));
+const childProcess = require('child_process');
 
 const STDOUT_BUFFER_SIZE = 2000 * 1024;
 const POSSIBLE_TAGS = {
   snapshot: /^snapshot$/i,
   candidate: /^rc\d*$/i,
   milestone: /^m\d+$/i
+};
+
+const DEFAULT_OPTIONS = {
+  redirectOutput: false,
+  maxBufferSize: STDOUT_BUFFER_SIZE,
+  cwd: '.'
 };
 
 function getDistTagForTag(tag) {
@@ -49,14 +54,17 @@ function getDistTagForVersion(version) {
   return matchingDistTags.length === 1 ? matchingDistTags[0] : null;
 }
 
-module.exports = function (cwd) {
-  if (cwd === undefined) {
-    cwd = '.';
+module.exports = function (opts) {
+  // default opts is cwd, for backwards compatibility
+  if (typeof opts === 'string') {
+    opts = {cwd: opts};
   }
+
+  opts = Object.assign({}, DEFAULT_OPTIONS, opts);
 
   function publish(distTag) {
     const publishCommand = 'npm publish' + (distTag ? ' --tag ' + distTag : '');
-    return childProcess.exec(publishCommand, {cwd: cwd, maxBuffer: STDOUT_BUFFER_SIZE});
+    return exec(publishCommand);
   }
 
   function publishPackage(packageObj) {
@@ -64,12 +72,29 @@ module.exports = function (cwd) {
     const distTag = getDistTagForVersion(version);
 
     if (distTag === 'snapshot') {
-      return childProcess.exec('npm unpublish --force', {cwd: cwd, maxBuffer: STDOUT_BUFFER_SIZE})
+      return exec('npm unpublish --force')
         .then(publish.bind(undefined, distTag));
     }
 
     return publish(distTag === null ? undefined : distTag);
   }
 
-  return readPkgUp({cwd: cwd}).then(publishPackage);
+  function exec(cmd) {
+    return new Promise(function (resolve, reject) {
+      const exec = childProcess.exec(cmd, {cwd: opts.cwd, maxBuffer: opts.maxBufferSize}, function (error, stdout, stderr) {
+        if (error) {
+          reject(stderr);
+        } else {
+          resolve(stdout);
+        }
+      });
+
+      if (opts.redirectOutput) {
+        exec.stdout.pipe(process.stdout);
+        exec.stderr.pipe(process.stderr);
+      }
+    });
+  }
+
+  return readPkgUp({cwd: opts.cwd}).then(publishPackage);
 };
